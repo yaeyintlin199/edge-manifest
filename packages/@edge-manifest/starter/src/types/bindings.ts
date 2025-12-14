@@ -1,7 +1,14 @@
 import type { EdgeManifest } from '@edge-manifest/core';
 
 export interface Bindings {
+  /** D1 Database binding */
   DB?: D1Database;
+
+  /** KV Namespace binding */
+  KV?: KVNamespace;
+
+  /** R2 Bucket binding */
+  R2?: R2Bucket;
 
   /**
    * Optional manifest injection.
@@ -17,4 +24,7 @@ export interface Bindings {
 
   /** Wrangler AI binding (optional in local dev) */
   ai?: unknown;
+
+  /** Additional environment variables */
+  [key: string]: unknown;
 }

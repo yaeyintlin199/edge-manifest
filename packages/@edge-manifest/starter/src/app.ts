@@ -1,13 +1,6 @@
-import {
-  ConfigParser,
-  type ConfigParserResult,
-  createD1RequestHandler,
-  type D1Bindings,
-  type TypedDrizzleD1,
-} from '@edge-manifest/core';
+import { ConfigParser, type ConfigParserResult, createEngine, type Engine } from '@edge-manifest/core';
 import { cors } from '@elysiajs/cors';
 import { Elysia } from 'elysia';
-import { CloudflareAdapter } from 'elysia/adapter/cloudflare-worker';
 import * as v from 'valibot';
 import { issueJWT, refreshJWT, verifyJWT } from './auth';
 import { registerCrudRoutes } from './routes';
@@ -15,9 +8,7 @@ import type { Bindings } from './types';
 
 type EmptySchema = Record<string, never>;
 
-const emptySchema = {} as EmptySchema;
-
-type Db = TypedDrizzleD1<EmptySchema>;
+type Db = Engine<EmptySchema>['db'];
 
 function createRequestId(): string {
   return crypto.randomUUID();
@@ -64,7 +55,18 @@ function toErrorMessage(error: unknown): string {
 
 export async function createApp(env: Bindings): Promise<ReturnType<typeof createAppInternal>> {
   const { manifest, error: manifestError } = loadManifestFromEnv(env);
-  const app = createAppInternal(env, manifest, manifestError);
+
+  // Initialize engine with all Cloudflare bindings
+  let engine: Engine<EmptySchema> | undefined;
+  let engineError: Error | undefined;
+
+  try {
+    engine = await createEngine<EmptySchema>(env, { schema: {} as EmptySchema });
+  } catch (error) {
+    engineError = error instanceof Error ? error : new Error(String(error));
+  }
+
+  const app = createAppInternal(env, manifest, manifestError, engine, engineError);
 
   // Register CRUD routes for entities in manifest
   if (!manifestError) {
@@ -78,10 +80,14 @@ function getJWTSecret(env: Bindings): string {
   return env.JWT_SECRET ?? 'default-dev-secret-change-in-production';
 }
 
-function createAppInternal(env: Bindings, manifest: ConfigParserResult, manifestError?: Error) {
-  const d1Handler = createD1RequestHandler({ schema: emptySchema });
-
-  const baseApp = new Elysia({ adapter: CloudflareAdapter })
+function createAppInternal(
+  env: Bindings,
+  manifest: ConfigParserResult,
+  manifestError: Error | undefined,
+  engine: Engine<EmptySchema> | undefined,
+  engineError: Error | undefined,
+) {
+  const baseApp = new Elysia({ aot: false })
     .decorate('env', env)
     .decorate('manifest', manifest)
     .decorate('manifestError', manifestError)
@@ -89,6 +95,8 @@ function createAppInternal(env: Bindings, manifest: ConfigParserResult, manifest
     .decorate('requestStartMs', 0)
     .decorate('db', undefined as Db | undefined)
     .decorate('dbError', undefined as Error | undefined)
+    .decorate('engine', engine)
+    .decorate('engineError', engineError)
     .decorate('user', null as Record<string, unknown> | null)
     .use(
       cors({
@@ -103,13 +111,13 @@ function createAppInternal(env: Bindings, manifest: ConfigParserResult, manifest
       ctx.requestStartMs = Date.now();
       ctx.set.headers['x-request-id'] = ctx.requestId;
 
-      try {
-        const result = await d1Handler({}, ctx.env as D1Bindings);
-        ctx.db = result.db as Db;
+      // Use the engine from initialization
+      if (ctx.engine) {
+        ctx.db = ctx.engine.db;
         ctx.dbError = undefined;
-      } catch (error) {
+      } else {
         ctx.db = undefined;
-        ctx.dbError = error instanceof Error ? error : new Error(String(error));
+        ctx.dbError = ctx.engineError || new Error('Engine not initialized');
       }
 
       console.info(
