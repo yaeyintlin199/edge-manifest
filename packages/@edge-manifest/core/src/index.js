@@ -11,6 +11,7 @@ export function createCore(config) {
 }
 export * from './config/config-parser';
 export * from './db/d1-handler';
+export * from './engine';
 export * from './manifest/types';
 export * from './manifest/validator';
 //# sourceMappingURL=index.js.map
