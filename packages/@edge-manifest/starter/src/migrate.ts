@@ -51,7 +51,8 @@ export async function runMigrations(env: Bindings, manifest: ConfigParserResult)
           sqlType = 'TEXT';
           break;
         default:
-          throw new Error(`Unsupported field kind: ${(field as any).kind}`);
+          // Exhaustive check - should never reach here
+          throw new Error(`Unsupported field kind: ${String((field as { kind: string }).kind)}`);
       }
 
       if (field.required && field.kind !== 'id' && field.kind !== 'uuid') {

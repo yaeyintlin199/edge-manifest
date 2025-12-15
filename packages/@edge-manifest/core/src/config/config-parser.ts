@@ -29,13 +29,20 @@ export interface FileLoader {
 
 export class ConfigParser {
   private _config?: ConfigParserResult;
-  private readonly loader: FileLoader;
+  private loader: FileLoader | undefined;
 
   constructor(loader?: FileLoader) {
-    this.loader = loader || createDefaultFileLoader();
+    this.loader = loader;
   }
 
   async loadFromFile(path: string, options?: ConfigParserOptions): Promise<ConfigParserResult> {
+    if (!this.loader) {
+      throw new Error(
+        'No FileLoader configured. ' +
+          'Either provide a FileLoader to the constructor, or use loadFromObject() instead.',
+      );
+    }
+
     try {
       const fileContent = await this.loader.readFile(path);
 
@@ -136,34 +143,4 @@ export class ConfigParser {
   }
 }
 
-function createDefaultFileLoader(): FileLoader {
-  // Dynamic import to avoid Node.js dependencies in bundle
-  return {
-    async readFile(path: string): Promise<string> {
-      if (typeof globalThis !== 'undefined' && 'fetch' in globalThis) {
-        // Workers environment - this would need a custom implementation
-        // For now, throw a helpful error
-        throw new Error(
-          'File loading not available in this environment. ' +
-            'Please provide a custom FileLoader for Workers environment.',
-        );
-      }
-
-      if (typeof (globalThis as any).Bun !== 'undefined') {
-        // Bun environment
-        const { readFile } = await import('node:fs/promises');
-        return readFile(path, 'utf-8');
-      }
-
-      if (typeof process !== 'undefined' && process.versions?.node) {
-        // Node.js environment
-        const { readFile } = await import('node:fs/promises');
-        return readFile(path, 'utf-8');
-      }
-
-      throw new Error(
-        'Unsupported environment for file loading. ' + 'Please provide a custom FileLoader implementation.',
-      );
-    },
-  };
-}
+// Note: For Node.js FileLoader, import from './config/node-loader' (CLI only)
