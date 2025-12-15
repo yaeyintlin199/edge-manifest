@@ -3,6 +3,7 @@ import { cors } from '@elysiajs/cors';
 import { Elysia } from 'elysia';
 import * as v from 'valibot';
 import { issueJWT, refreshJWT, verifyJWT } from './auth';
+import { needsMigrations, runMigrations } from './migrate';
 import { registerCrudRoutes } from './routes';
 import type { Bindings } from './types';
 
@@ -55,6 +56,17 @@ function toErrorMessage(error: unknown): string {
 
 export async function createApp(env: Bindings): Promise<ReturnType<typeof createAppInternal>> {
   const { manifest, error: manifestError } = loadManifestFromEnv(env);
+
+  // Run migrations if needed
+  if (!manifestError && (await needsMigrations(env, manifest))) {
+    try {
+      console.log('Running migrations...');
+      await runMigrations(env, manifest);
+      console.log('Migrations completed successfully');
+    } catch (error) {
+      console.error('Migration error:', error);
+    }
+  }
 
   // Initialize engine with all Cloudflare bindings
   let engine: Engine<EmptySchema> | undefined;
@@ -150,6 +162,12 @@ function createAppInternal(
       })() as any,
     )
     .derive(async (ctx: any) => {
+      // Check for API key first (simpler auth for testing)
+      const apiKeyHeader = ctx.request.headers.get('x-api-key');
+      if (apiKeyHeader && ctx.env.API_KEY && apiKeyHeader === ctx.env.API_KEY) {
+        return { user: { userId: 'api-key-user', admin: true } };
+      }
+
       // Extract JWT from Authorization header
       const authHeader = ctx.request.headers.get('authorization');
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -200,10 +218,20 @@ function createAppInternal(
         },
       };
     })
-    .get('/health', ({ requestId, manifestError }) => ({
+    .get('/health', ({ requestId, manifestError, manifest }) => ({
       ok: true,
       requestId,
       manifestLoaded: !manifestError,
+      manifest: {
+        id: manifest.id,
+        name: manifest.name,
+        version: manifest.version,
+        entities: manifest.entities.map((e) => ({
+          name: e.name,
+          table: e.table || e.name.toLowerCase(),
+          fieldCount: e.fields.length,
+        })),
+      },
     }))
     .get('/ready', async ({ env, dbError, requestId, set }) => {
       if (!env.DB) {
@@ -251,6 +279,43 @@ function createAppInternal(
           requestId,
           ready: false,
           reason: toErrorMessage(error),
+        };
+      }
+    })
+    .get('/migrations/status', async ({ env, manifest, requestId }) => {
+      if (!env.DB) {
+        return {
+          ok: false,
+          requestId,
+          error: 'D1 binding not available',
+        };
+      }
+
+      try {
+        const tables: { name: string; exists: boolean }[] = [];
+
+        for (const entity of manifest.entities) {
+          const tableName = entity.table || entity.name.toLowerCase();
+          const result = await env.DB.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`)
+            .bind(tableName)
+            .first();
+
+          tables.push({
+            name: tableName,
+            exists: !!result,
+          });
+        }
+
+        return {
+          ok: true,
+          requestId,
+          tables,
+        };
+      } catch (error) {
+        return {
+          ok: false,
+          requestId,
+          error: toErrorMessage(error),
         };
       }
     })
