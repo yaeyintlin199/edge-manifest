@@ -6,15 +6,22 @@
   "type": "module",
   "packageManager": "pnpm@9.0.0",
   "scripts": {
-    "build": "bun run -F @edge-manifest/core build && bun run --parallel -F @edge-manifest/generators -F @edge-manifest/cli -F @edge-manifest/starter -F @edge-manifest/admin-ui -F @edge-manifest/sdk build",
+    "postinstall": "tsc --build",
+    "build": "tsc --build",
     "lint": "biome check .",
     "lint:fix": "biome check --apply .",
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest --coverage",
-    "typecheck": "tsc --build",
-    "dev": "bun -r run dev --parallel",
-    "release": "bun -r publish --access public"
+    "typecheck": "tsc --build --noEmit",
+    "edge": "pnpm --filter @edge-manifest/cli exec edge-manifest",
+    "detect": "pnpm run edge -- detect",
+    "generate": "pnpm run edge -- generate",
+    "migrate:generate": "pnpm run edge -- migrate:generate",
+    "migrate:up": "pnpm run edge -- migrate:up",
+    "dev": "pnpm run edge -- dev",
+    "deploy": "pnpm run edge -- deploy",
+    "release": "pnpm -r publish --access public"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.8",

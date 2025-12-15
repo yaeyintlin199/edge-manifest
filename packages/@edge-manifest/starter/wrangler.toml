@@ -1,102 +1,14 @@
-# Edge Manifest Worker Configuration
 name = "edge-manifest-worker"
 main = "src/index.ts"
 compatibility_date = "2025-12-13"
 upload_source_maps = true
-minify = false
+minify = true
 send_metrics = false
 
-[placement]
-mode = "smart"
-
-# Development server configuration
 [dev]
 port = 7860
-ip = "0.0.0.0"
-local_protocol = "http"
-upstream_protocol = "https"
 
-# D1 Database binding (SQLite-compatible serverless SQL)
 [[d1_databases]]
 binding = "DB"
 database_name = "edge-manifest-db"
-database_id = "local-db-id"
-# For local development, this will create a local SQLite database
-# For production, create a D1 database with: wrangler d1 create edge-manifest-db
-
-# Environment Variables (optional - set via wrangler.toml or .dev.vars)
-# Uncomment and configure as needed:
-
-# [vars]
-# JWT_SECRET = "your-jwt-secret-here"
-# EDGE_MANIFEST = '{"id":"app","name":"App","version":"1.0.0","entities":[]}'
-
-# KV Namespace binding (optional - for key-value storage)
-# Uncomment to enable KV storage:
-# [[kv_namespaces]]
-# binding = "KV"
-# id = "your-kv-namespace-id"
-# preview_id = "your-preview-kv-namespace-id"
-
-# R2 Bucket binding (optional - for object storage)
-# Uncomment to enable R2 storage:
-# [[r2_buckets]]
-# binding = "R2"
-# bucket_name = "edge-manifest-bucket"
-# preview_bucket_name = "edge-manifest-bucket-preview"
-
-# Durable Object binding (optional - for stateful objects)
-# Uncomment to enable Durable Objects:
-# [[durable_objects.bindings]]
-# name = "DURABLE"
-# class_name = "YourDurableObject"
-# script_name = "edge-manifest-worker"
-
-# AI binding (optional - for Cloudflare AI)
-# Uncomment to enable AI:
-# [ai]
-# binding = "AI"
-
-# Analytics Engine binding (optional - for custom analytics)
-# Uncomment to enable Analytics Engine:
-# [[analytics_engine_datasets]]
-# binding = "ANALYTICS"
-
-# Queue binding (optional - for message queues)
-# Uncomment to enable Queues:
-# [[queues.producers]]
-# binding = "QUEUE"
-# queue = "edge-manifest-queue"
-
-# Hyperdrive binding (optional - for database connection pooling)
-# Uncomment to enable Hyperdrive:
-# [[hyperdrive]]
-# binding = "HYPERDRIVE"
-# id = "your-hyperdrive-id"
-
-# Vectorize binding (optional - for vector database)
-# Uncomment to enable Vectorize:
-# [[vectorize]]
-# binding = "VECTORIZE"
-# index_name = "edge-manifest-index"
-
-# Browser Rendering binding (optional - for headless browser)
-# Uncomment to enable Browser Rendering:
-# [browser]
-# binding = "BROWSER"
-
-# Service bindings (optional - for calling other workers)
-# Uncomment to enable service bindings:
-# [[services]]
-# binding = "SERVICE"
-# service = "other-worker-name"
-# environment = "production"
-
-# Observability
-[observability]
-enabled = true
-head_sampling_rate = 1
-
-# Limits (adjust as needed)
-# [limits]
-# cpu_ms = 50
+database_id = "00000000-0000-0000-0000-000000000000"

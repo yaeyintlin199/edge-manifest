@@ -1,4 +1,4 @@
-import * as v from './valibot';
+import * as v from './valibot.js';
 
 const nonEmptyString = v.pipe(v.string(), v.minLength(1, 'Expected a non-empty string'));
 

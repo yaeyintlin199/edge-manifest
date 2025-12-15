@@ -12,11 +12,10 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
-    "dist",
-    "src"
+    "dist"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -b",
     "typecheck": "tsc --noEmit",
     "test": "vitest --run"
   },

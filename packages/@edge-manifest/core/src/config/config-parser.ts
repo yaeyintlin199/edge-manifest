@@ -1,5 +1,5 @@
-import type { EdgeManifest } from '../manifest/types';
-import { validateManifest } from '../manifest/validator';
+import type { EdgeManifest } from '../manifest/types.js';
+import { validateManifest } from '../manifest/validator.js';
 
 export interface RuntimeOverrides {
   defaultRegion?: string;
@@ -29,13 +29,20 @@ export interface FileLoader {
 
 export class ConfigParser {
   private _config?: ConfigParserResult;
-  private readonly loader: FileLoader;
+  private readonly loader?: FileLoader;
 
   constructor(loader?: FileLoader) {
-    this.loader = loader || createDefaultFileLoader();
+    this.loader = loader;
   }
 
   async loadFromFile(path: string, options?: ConfigParserOptions): Promise<ConfigParserResult> {
+    if (!this.loader) {
+      throw new Error(
+        'File loading is not available in this runtime. ' +
+          'Use loadFromObject() in edge/worker environments, or provide a FileLoader (e.g. createNodeFileLoader from @edge-manifest/core/node).',
+      );
+    }
+
     try {
       const fileContent = await this.loader.readFile(path);
 
@@ -134,36 +141,4 @@ export class ConfigParser {
 
     return merged;
   }
-}
-
-function createDefaultFileLoader(): FileLoader {
-  // Dynamic import to avoid Node.js dependencies in bundle
-  return {
-    async readFile(path: string): Promise<string> {
-      if (typeof globalThis !== 'undefined' && 'fetch' in globalThis) {
-        // Workers environment - this would need a custom implementation
-        // For now, throw a helpful error
-        throw new Error(
-          'File loading not available in this environment. ' +
-            'Please provide a custom FileLoader for Workers environment.',
-        );
-      }
-
-      if (typeof (globalThis as any).Bun !== 'undefined') {
-        // Bun environment
-        const { readFile } = await import('node:fs/promises');
-        return readFile(path, 'utf-8');
-      }
-
-      if (typeof process !== 'undefined' && process.versions?.node) {
-        // Node.js environment
-        const { readFile } = await import('node:fs/promises');
-        return readFile(path, 'utf-8');
-      }
-
-      throw new Error(
-        'Unsupported environment for file loading. ' + 'Please provide a custom FileLoader implementation.',
-      );
-    },
-  };
 }

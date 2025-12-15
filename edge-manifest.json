@@ -1,0 +1,26 @@
+{
+  "id": "todo-app",
+  "name": "Todo App",
+  "version": "1.0.0",
+  "entities": [
+    {
+      "name": "TodoList",
+      "table": "todolist",
+      "fields": [
+        { "name": "id", "kind": "id" },
+        { "name": "title", "kind": "string", "required": true },
+        { "name": "description", "kind": "string" }
+      ]
+    },
+    {
+      "name": "Todo",
+      "table": "todo",
+      "fields": [
+        { "name": "id", "kind": "id" },
+        { "name": "listId", "kind": "string", "required": true },
+        { "name": "title", "kind": "string", "required": true },
+        { "name": "done", "kind": "boolean", "default": false }
+      ]
+    }
+  ]
+}
