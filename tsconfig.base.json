@@ -5,16 +5,10 @@
     "lib": ["ESNext"],
 
     /* Modules */
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "rootDir": "./",
-    "baseUrl": "./",
-    "paths": {
-      "@edge-manifest/*": ["./packages/@edge-manifest/*/src"]
-    },
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
 
     /* Emit */
-    "outDir": "./dist",
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,

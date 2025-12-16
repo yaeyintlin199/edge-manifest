@@ -1,8 +1,8 @@
 import type { ConfigParserResult } from '@edge-manifest/core';
 import type { Elysia } from 'elysia';
 import * as v from 'valibot';
-import { CrudService, errorResponse, listResponse, successResponse } from './crud';
-import { generateValidatorsForEntity } from './validators';
+import { CrudService, errorResponse, listResponse, successResponse } from './crud.js';
+import { generateValidatorsForEntity } from './validators.js';
 
 /**
  * Auth guard: checks if user is authenticated

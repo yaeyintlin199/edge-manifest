@@ -1,1 +1,1 @@
-export type { Bindings } from './bindings';
+export type { Bindings } from './bindings.js';

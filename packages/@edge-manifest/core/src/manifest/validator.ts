@@ -1,6 +1,6 @@
-import { edgeManifestSchema } from './schema';
-import type { EdgeManifest } from './types';
-import { safeParse } from './valibot';
+import { edgeManifestSchema } from './schema.js';
+import type { EdgeManifest } from './types.js';
+import { safeParse } from './valibot.js';
 
 type IssueLike = {
   message?: unknown;

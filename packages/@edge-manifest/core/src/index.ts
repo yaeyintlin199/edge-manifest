@@ -13,7 +13,7 @@ export function createCore(config: CoreConfig) {
   };
 }
 
-export * from './config/config-parser';
-export * from './db/d1-handler';
-export * from './manifest/types';
-export * from './manifest/validator';
+export * from './config/config-parser.js';
+export * from './db/d1-handler.js';
+export * from './manifest/types.js';
+export * from './manifest/validator.js';

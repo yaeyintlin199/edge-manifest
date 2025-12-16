@@ -9,9 +9,9 @@ import { cors } from '@elysiajs/cors';
 import { Elysia } from 'elysia';
 import { CloudflareAdapter } from 'elysia/adapter/cloudflare-worker';
 import * as v from 'valibot';
-import { issueJWT, refreshJWT, verifyJWT } from './auth';
-import { registerCrudRoutes } from './routes';
-import type { Bindings } from './types';
+import { issueJWT, refreshJWT, verifyJWT } from './auth.js';
+import { registerCrudRoutes } from './routes.js';
+import type { Bindings } from './types.js';
 
 type EmptySchema = Record<string, never>;
 

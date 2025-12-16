@@ -1,9 +1,9 @@
 import type { EdgeManifest } from '@edge-manifest/core';
-import { generateAdminUI } from './admin-generator';
-import { generateApiRoutes, generateTypeBoxSchemas } from './api-generator';
-import { generateMigrations, generateRollback } from './migration-generator';
-import { generateDrizzleSchema, generateZodSchemas } from './schema-generator';
-import { generateApiTypes, generateTypes } from './type-generator';
+import { generateAdminUI } from './admin-generator.js';
+import { generateApiRoutes, generateTypeBoxSchemas } from './api-generator.js';
+import { generateMigrations, generateRollback } from './migration-generator.js';
+import { generateDrizzleSchema, generateZodSchemas } from './schema-generator.js';
+import { generateApiTypes, generateTypes } from './type-generator.js';
 
 export interface GeneratorOutput {
   schema: string;
