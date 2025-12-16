@@ -46,6 +46,11 @@ function generateBodyFieldSchemas(fields: ManifestField[]): FieldSchemas {
       continue;
     }
 
+    // Skip auto-generated timestamp fields
+    if (field.name === 'createdAt' || field.name === 'updatedAt') {
+      continue;
+    }
+
     const fieldName = field.name;
     const schema = getFieldSchema(field.kind);
 

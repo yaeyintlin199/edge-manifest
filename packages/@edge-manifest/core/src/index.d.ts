@@ -10,6 +10,7 @@ export declare function createCore(config: CoreConfig): {
 };
 export * from './config/config-parser';
 export * from './db/d1-handler';
+export * from './engine';
 export * from './manifest/types';
 export * from './manifest/validator';
 //# sourceMappingURL=index.d.ts.map

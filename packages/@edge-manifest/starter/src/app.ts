@@ -1,23 +1,15 @@
-import {
-  ConfigParser,
-  type ConfigParserResult,
-  createD1RequestHandler,
-  type D1Bindings,
-  type TypedDrizzleD1,
-} from '@edge-manifest/core';
+import { ConfigParser, type ConfigParserResult, createEngine, type Engine } from '@edge-manifest/core';
 import { cors } from '@elysiajs/cors';
 import { Elysia } from 'elysia';
-import { CloudflareAdapter } from 'elysia/adapter/cloudflare-worker';
 import * as v from 'valibot';
 import { issueJWT, refreshJWT, verifyJWT } from './auth';
+import { needsMigrations, runMigrations } from './migrate';
 import { registerCrudRoutes } from './routes';
 import type { Bindings } from './types';
 
 type EmptySchema = Record<string, never>;
 
-const emptySchema = {} as EmptySchema;
-
-type Db = TypedDrizzleD1<EmptySchema>;
+type Db = Engine<EmptySchema>['db'];
 
 function createRequestId(): string {
   return crypto.randomUUID();
@@ -64,7 +56,29 @@ function toErrorMessage(error: unknown): string {
 
 export async function createApp(env: Bindings): Promise<ReturnType<typeof createAppInternal>> {
   const { manifest, error: manifestError } = loadManifestFromEnv(env);
-  const app = createAppInternal(env, manifest, manifestError);
+
+  // Run migrations if needed
+  if (!manifestError && (await needsMigrations(env, manifest))) {
+    try {
+      console.log('Running migrations...');
+      await runMigrations(env, manifest);
+      console.log('Migrations completed successfully');
+    } catch (error) {
+      console.error('Migration error:', error);
+    }
+  }
+
+  // Initialize engine with all Cloudflare bindings
+  let engine: Engine<EmptySchema> | undefined;
+  let engineError: Error | undefined;
+
+  try {
+    engine = await createEngine<EmptySchema>(env, { schema: {} as EmptySchema });
+  } catch (error) {
+    engineError = error instanceof Error ? error : new Error(String(error));
+  }
+
+  const app = createAppInternal(env, manifest, manifestError, engine, engineError);
 
   // Register CRUD routes for entities in manifest
   if (!manifestError) {
@@ -78,10 +92,14 @@ function getJWTSecret(env: Bindings): string {
   return env.JWT_SECRET ?? 'default-dev-secret-change-in-production';
 }
 
-function createAppInternal(env: Bindings, manifest: ConfigParserResult, manifestError?: Error) {
-  const d1Handler = createD1RequestHandler({ schema: emptySchema });
-
-  const baseApp = new Elysia({ adapter: CloudflareAdapter })
+function createAppInternal(
+  env: Bindings,
+  manifest: ConfigParserResult,
+  manifestError: Error | undefined,
+  engine: Engine<EmptySchema> | undefined,
+  engineError: Error | undefined,
+) {
+  const baseApp = new Elysia({ aot: false })
     .decorate('env', env)
     .decorate('manifest', manifest)
     .decorate('manifestError', manifestError)
@@ -89,6 +107,8 @@ function createAppInternal(env: Bindings, manifest: ConfigParserResult, manifest
     .decorate('requestStartMs', 0)
     .decorate('db', undefined as Db | undefined)
     .decorate('dbError', undefined as Error | undefined)
+    .decorate('engine', engine)
+    .decorate('engineError', engineError)
     .decorate('user', null as Record<string, unknown> | null)
     .use(
       cors({
@@ -103,13 +123,13 @@ function createAppInternal(env: Bindings, manifest: ConfigParserResult, manifest
       ctx.requestStartMs = Date.now();
       ctx.set.headers['x-request-id'] = ctx.requestId;
 
-      try {
-        const result = await d1Handler({}, ctx.env as D1Bindings);
-        ctx.db = result.db as Db;
+      // Use the engine from initialization
+      if (ctx.engine) {
+        ctx.db = ctx.engine.db;
         ctx.dbError = undefined;
-      } catch (error) {
+      } else {
         ctx.db = undefined;
-        ctx.dbError = error instanceof Error ? error : new Error(String(error));
+        ctx.dbError = ctx.engineError || new Error('Engine not initialized');
       }
 
       console.info(
@@ -142,6 +162,12 @@ function createAppInternal(env: Bindings, manifest: ConfigParserResult, manifest
       })() as any,
     )
     .derive(async (ctx: any) => {
+      // Check for API key first (simpler auth for testing)
+      const apiKeyHeader = ctx.request.headers.get('x-api-key');
+      if (apiKeyHeader && ctx.env.API_KEY && apiKeyHeader === ctx.env.API_KEY) {
+        return { user: { userId: 'api-key-user', admin: true } };
+      }
+
       // Extract JWT from Authorization header
       const authHeader = ctx.request.headers.get('authorization');
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -192,10 +218,20 @@ function createAppInternal(env: Bindings, manifest: ConfigParserResult, manifest
         },
       };
     })
-    .get('/health', ({ requestId, manifestError }) => ({
+    .get('/health', ({ requestId, manifestError, manifest }) => ({
       ok: true,
       requestId,
       manifestLoaded: !manifestError,
+      manifest: {
+        id: manifest.id,
+        name: manifest.name,
+        version: manifest.version,
+        entities: manifest.entities.map((e) => ({
+          name: e.name,
+          table: e.table || e.name.toLowerCase(),
+          fieldCount: e.fields.length,
+        })),
+      },
     }))
     .get('/ready', async ({ env, dbError, requestId, set }) => {
       if (!env.DB) {
@@ -243,6 +279,43 @@ function createAppInternal(env: Bindings, manifest: ConfigParserResult, manifest
           requestId,
           ready: false,
           reason: toErrorMessage(error),
+        };
+      }
+    })
+    .get('/migrations/status', async ({ env, manifest, requestId }) => {
+      if (!env.DB) {
+        return {
+          ok: false,
+          requestId,
+          error: 'D1 binding not available',
+        };
+      }
+
+      try {
+        const tables: { name: string; exists: boolean }[] = [];
+
+        for (const entity of manifest.entities) {
+          const tableName = entity.table || entity.name.toLowerCase();
+          const result = await env.DB.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`)
+            .bind(tableName)
+            .first();
+
+          tables.push({
+            name: tableName,
+            exists: !!result,
+          });
+        }
+
+        return {
+          ok: true,
+          requestId,
+          tables,
+        };
+      } catch (error) {
+        return {
+          ok: false,
+          requestId,
+          error: toErrorMessage(error),
         };
       }
     })

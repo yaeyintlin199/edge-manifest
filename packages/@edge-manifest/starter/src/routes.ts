@@ -88,7 +88,7 @@ export async function registerCrudRoutes(app: Elysia<any>, manifest: ConfigParse
 
     // Create endpoint: POST /api/<entity>
     app.post(entityPath, async (ctx: any): Promise<any> => {
-      const { db, request, set, user } = ctx;
+      const { db, body, set, user } = ctx;
       if (!requireAuth(user, set)) {
         return errorResponse('UNAUTHORIZED', 'Authentication required');
       }
@@ -99,8 +99,8 @@ export async function registerCrudRoutes(app: Elysia<any>, manifest: ConfigParse
       }
 
       try {
-        const bodyText = await request.text();
-        const bodyData = bodyText ? JSON.parse(bodyText) : {};
+        // Use body directly from context (Elysia handles parsing)
+        const bodyData = body || {};
 
         // Validate
         const parsed = await v.parseAsync(validators.createBody, bodyData);
@@ -116,7 +116,7 @@ export async function registerCrudRoutes(app: Elysia<any>, manifest: ConfigParse
     });
 
     // Update endpoint: PUT/PATCH /api/<entity>/:id
-    const updateHandler = async ({ db, params, request, set, user }: any): Promise<any> => {
+    const updateHandler = async ({ db, params, body, set, user }: any): Promise<any> => {
       if (!requireAuth(user, set)) {
         return errorResponse('UNAUTHORIZED', 'Authentication required');
       }
@@ -127,8 +127,7 @@ export async function registerCrudRoutes(app: Elysia<any>, manifest: ConfigParse
       }
 
       try {
-        const bodyText = await request.text();
-        const bodyData = bodyText ? JSON.parse(bodyText) : {};
+        const bodyData = body || {};
 
         const parsed = await v.parseAsync(validators.updateBody, bodyData);
 

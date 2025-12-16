@@ -9,9 +9,6 @@
     "moduleResolution": "Bundler",
     "rootDir": "./",
     "baseUrl": "./",
-    "paths": {
-      "@edge-manifest/*": ["./packages/@edge-manifest/*/src"]
-    },
 
     /* Emit */
     "outDir": "./dist",

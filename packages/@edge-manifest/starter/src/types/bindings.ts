@@ -1,7 +1,14 @@
 import type { EdgeManifest } from '@edge-manifest/core';
 
 export interface Bindings {
+  /** D1 Database binding */
   DB?: D1Database;
+
+  /** KV Namespace binding */
+  KV?: KVNamespace;
+
+  /** R2 Bucket binding */
+  R2?: R2Bucket;
 
   /**
    * Optional manifest injection.
@@ -15,6 +22,12 @@ export interface Bindings {
   /** JWT secret for authentication */
   JWT_SECRET?: string;
 
+  /** Simple API key for testing (bypasses JWT auth) */
+  API_KEY?: string;
+
   /** Wrangler AI binding (optional in local dev) */
   ai?: unknown;
+
+  /** Additional environment variables */
+  [key: string]: unknown;
 }
