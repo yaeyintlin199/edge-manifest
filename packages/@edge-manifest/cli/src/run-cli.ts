@@ -4,7 +4,7 @@ import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 
-import * as pc from 'picocolors';
+import pc from 'picocolors';
 import { build } from 'esbuild';
 import { parse as parseToml } from 'smol-toml';
 import { parse as parseYaml } from 'yaml';
@@ -141,7 +141,7 @@ async function cmdGenerate(argv: string[]): Promise<void> {
   const starterDir = path.join(repoRoot, 'packages/@edge-manifest/starter');
   const outputDir = path.resolve(out ?? path.join(starterDir, 'generated'));
 
-  const manifestPath = await resolveManifestPath({ repoRoot, manifestPath: manifest });
+  const manifestPath = manifest ? await resolveManifestPath({ repoRoot, manifestPath: manifest }) : await resolveManifestPath({ repoRoot });
   const edgeManifest = await loadManifest(manifestPath);
 
   const targets = positionals.length > 0 ? positionals : ['all'];
@@ -167,11 +167,11 @@ async function cmdGenerate(argv: string[]): Promise<void> {
     await fs.mkdir(path.join(outputDir, 'admin/components'), { recursive: true });
 
     for (const [name, content] of Object.entries(result.admin.routes)) {
-      await fs.writeFile(path.join(outputDir, 'admin/routes', name), content, 'utf-8');
+      await fs.writeFile(path.join(outputDir, 'admin/routes', name), String(content), 'utf-8');
     }
 
     for (const [name, content] of Object.entries(result.admin.components)) {
-      await fs.writeFile(path.join(outputDir, 'admin/components', name), content, 'utf-8');
+      await fs.writeFile(path.join(outputDir, 'admin/components', name), String(content), 'utf-8');
     }
 
     process.stdout.write(`${pc.green('✓')} Generated artifacts in ${path.relative(process.cwd(), outputDir)}\n`);
@@ -200,7 +200,7 @@ async function cmdMigrateGenerate(argv: string[]): Promise<void> {
   const starterDir = path.join(repoRoot, 'packages/@edge-manifest/starter');
   const outputDir = path.resolve(out ?? path.join(starterDir, 'migrations'));
 
-  const manifestPath = await resolveManifestPath({ repoRoot, manifestPath: manifest });
+  const manifestPath = manifest ? await resolveManifestPath({ repoRoot, manifestPath: manifest }) : await resolveManifestPath({ repoRoot });
   const edgeManifest = await loadManifest(manifestPath);
 
   await writeMigrations(edgeManifest, outputDir);
@@ -289,7 +289,7 @@ async function cmdWrangler(argv: string[], action: 'dev' | 'deploy'): Promise<vo
 
   const configPath = path.resolve(config ?? path.join(starterDir, 'wrangler.toml'));
 
-  const manifestPath = await resolveManifestPath({ repoRoot, manifestPath: manifest });
+  const manifestPath = manifest ? await resolveManifestPath({ repoRoot, manifestPath: manifest }) : await resolveManifestPath({ repoRoot });
   const edgeManifest = await loadManifest(manifestPath);
   const manifestJson = JSON.stringify(edgeManifest);
 
@@ -387,7 +387,7 @@ async function resolveManifestPath({
     }
   }
 
-  return candidates[0];
+  return candidates[0]!;
 }
 
 async function loadManifest(filePath: string): Promise<EdgeManifest> {

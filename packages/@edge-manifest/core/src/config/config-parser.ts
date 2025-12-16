@@ -29,14 +29,15 @@ export interface FileLoader {
 
 export class ConfigParser {
   private _config?: ConfigParserResult;
-  private readonly loader?: FileLoader;
+  private readonly loader: FileLoader | undefined;
 
   constructor(loader?: FileLoader) {
     this.loader = loader;
   }
 
   async loadFromFile(path: string, options?: ConfigParserOptions): Promise<ConfigParserResult> {
-    if (!this.loader) {
+    const loader = this.loader;
+    if (!loader) {
       throw new Error(
         'File loading is not available in this runtime. ' +
           'Use loadFromObject() in edge/worker environments, or provide a FileLoader (e.g. createNodeFileLoader from @edge-manifest/core/node).',
@@ -44,7 +45,7 @@ export class ConfigParser {
     }
 
     try {
-      const fileContent = await this.loader.readFile(path);
+      const fileContent = await loader.readFile(path);
 
       // Parse JSON with structured error handling
       let manifest: unknown;

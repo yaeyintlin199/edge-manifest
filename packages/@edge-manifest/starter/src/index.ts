@@ -1,5 +1,5 @@
-import { createApp } from './app';
-import type { Bindings } from './types';
+import { createApp } from './app.js';
+import type { Bindings } from './types.js';
 
 let cachedApp: Awaited<ReturnType<typeof createApp>> | undefined;
 let cachedEnv: Bindings | undefined;
